@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM Arquitetos V2 | Multiusuário</title>
+  <style>
+    :root { --bg:#f2f5fb; --card:#fff; --border:#dbe3f0; --text:#1f2837; --muted:#6a778f; --primary:#1c4ec9; --danger:#be2a37; --ok:#129553; }
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .container{max-width:1380px;margin:0 auto;padding:20px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 20px rgba(19,30,67,.06)}
+    .hidden{display:none!important}
+    .top{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap}
+    h1,h2,h3{margin:0}.muted{color:var(--muted)}
+    .btn{border:none;border-radius:8px;padding:9px 12px;font-weight:700;cursor:pointer}.btn:disabled{opacity:.55;cursor:not-allowed}
+    .btn-primary{background:var(--primary);color:#fff}.btn-light{background:#e9efff;color:#2047a8}.btn-danger{background:#fde8eb;color:#9e2530}
+    .login-wrap{max-width:420px;margin:7vh auto}
+    .form{padding:18px}.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+    .field{display:flex;flex-direction:column;gap:6px} label{font-size:.83rem;color:var(--muted);font-weight:700}
+    input,textarea,select{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font:inherit} textarea{min-height:80px;resize:vertical}
+    .app-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+    .toolbar{padding:12px 16px;display:grid;grid-template-columns:1fr auto auto;gap:8px;border-bottom:1px solid var(--border)}
+    table{width:100%;border-collapse:collapse;min-width:980px} th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;font-size:.9rem}
+    th{background:#f7f9ff;position:sticky;top:0}
+    .table-wrap{padding:0 14px 14px;overflow:auto;max-height:70vh}
+    .pill{display:inline-block;padding:3px 8px;border-radius:100px;font-size:.78rem;font-weight:700}.yes{background:#e7f9ef;color:var(--ok)}.no{background:#fff4dd;color:#ab7008}
+    fieldset{border:1px solid var(--border);border-radius:10px;margin:0 0 14px;padding:12px} legend{padding:0 8px;font-weight:800;color:#26418d}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px}.stat{border:1px solid var(--border);border-radius:10px;padding:10px}.stat b{display:block;font-size:1.15rem}
+    @media (max-width:1120px){.app-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section id="loginSection" class="card login-wrap">
+      <div class="top"><div><h2>CRM Arquitetos V2</h2><div class="muted">Acesso por perfil (consultor e gerente)</div></div></div>
+      <form id="loginForm" class="form">
+        <div class="field"><label>Usuário</label><input name="username" required/></div>
+        <div class="field"><label>Senha</label><input name="password" type="password" required/></div>
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="btn btn-primary" type="submit">Entrar</button>
+          <small class="muted">Padrão inicial: gerente <b>admin</b> / <b>admin123</b></small>
+        </div>
+      </form>
+    </section>
+
+    <section id="appSection" class="hidden">
+      <div class="card" style="margin-bottom:14px">
+        <div class="top">
+          <div>
+            <h1>CRM Arquitetos — Versão 2</h1>
+            <div class="muted" id="whoami"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="exportBtn" class="btn btn-light" type="button">Exportar carteira (JSON)</button>
+            <button id="logoutBtn" class="btn btn-danger" type="button">Sair</button>
+          </div>
+        </div>
+        <div class="stats" id="stats"></div>
+      </div>
+
+      <div id="managerPanel" class="card hidden" style="margin-bottom:14px">
+        <div class="top"><h3>Administração do Gerente — Consultores</h3></div>
+        <div class="form grid">
+          <div class="field"><label>Nome do consultor</label><input id="consultorNome" /></div>
+          <div class="field"><label>Usuário</label><input id="consultorUser" /></div>
+          <div class="field"><label>Senha inicial</label><input id="consultorPass" type="password" /></div>
+          <div class="field" style="align-self:end"><button id="addConsultorBtn" class="btn btn-primary" type="button">Adicionar consultor</button></div>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Usuário</th><th>Arquit. na carteira</th><th>Ações</th></tr></thead><tbody id="consultoresBody"></tbody></table></div>
+      </div>
+
+      <main class="app-grid">
+        <section class="card">
+          <div class="top"><h3>Cadastro de Arquiteto</h3><button id="newBtn" type="button" class="btn btn-light">Novo cadastro</button></div>
+          <form id="archForm" class="form">
+            <fieldset><legend>Dados Cadastrais</legend><div class="grid">
+              <div class="field"><label>Nome completo*</label><input name="nome_completo" required/></div>
+              <div class="field"><label>Nome do escritório</label><input name="nome_escritorio"/></div>
+              <div class="field"><label>CNPJ</label><input name="cnpj"/></div>
+              <div class="field"><label>Cidade / Região</label><input name="cidade_regiao"/></div>
+              <div class="field"><label>Telefone</label><input name="telefone"/></div>
+              <div class="field"><label>E-mail</label><input type="email" name="email"/></div>
+              <div class="field"><label>Instagram</label><input name="instagram"/></div>
+              <div class="field"><label>Site</label><input name="site"/></div>
+              <div class="field"><label>Endereço da obra</label><input name="endereco_obra"/></div>
+              <div class="field"><label>Empreendimento</label><input name="empreendimento"/></div>
+              <div class="field"><label>Valor do apto</label><input name="valor_apto"/></div>
+              <div class="field"><label>M²</label><input name="m2"/></div>
+              <div class="field"><label>Número de seguidores</label><input type="number" min="0" name="numero_seguidores"/></div>
+              <div class="field"><label>Primeiro contato</label><input type="date" name="primeiro_contato"/></div>
+              <div class="field"><label>Próximo contato</label><input type="date" name="proximo_contato"/></div>
+              <div class="field"><label>Tem projeto?</label><select name="tem_projeto"><option value="">Selecione</option><option>Sim</option><option>Não</option></select></div>
+              <div class="field" id="ownerField"><label>Consultor responsável</label><select name="owner_consultor_id" id="ownerConsultor"></select></div>
+            </div></fieldset>
+
+            <fieldset><legend>Perfil e Operação Comercial</legend><div class="grid">
+              <div class="field"><label>Estrutura profissional</label><input name="perfil_estrutura"/></div>
+              <div class="field"><label>Qtd arquitetos no escritório</label><input name="qtd_arquitetos"/></div>
+              <div class="field"><label>Tempo de mercado</label><input name="tempo_mercado"/></div>
+              <div class="field"><label>Segmento principal</label><input name="segmento_atuacao"/></div>
+              <div class="field"><label>Ticket médio</label><input name="ticket_medio"/></div>
+              <div class="field"><label>Obras por mês</label><input name="obras_mes"/></div>
+              <div class="field"><label>Modelo comercial</label><input name="modelo_comercial"/></div>
+              <div class="field"><label>Dores com fornecedores</label><textarea name="dores_fornecedores"></textarea></div>
+              <div class="field"><label>Última experiência</label><textarea name="ultima_experiencia"></textarea></div>
+              <div class="field"><label>Como podemos ajudar a vender melhor?</label><textarea name="ajuda_vender"></textarea></div>
+            </div></fieldset>
+
+            <button class="btn btn-primary" id="saveBtn" type="submit">Salvar cadastro</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="toolbar">
+            <input id="searchInput" placeholder="Buscar por nome, escritório, cidade, e-mail..."/>
+            <span class="muted" id="totalInfo">0 registros</span>
+            <button id="upcomingBtn" class="btn btn-light" type="button">Somente próximos contatos</button>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Arquiteto</th><th>Escritório</th><th>Responsável</th><th>Tem projeto</th><th>Primeiro contato</th><th>Próximo contato</th><th>Ações</th></tr></thead><tbody id="archBody"></tbody></table>
+            <div id="empty" class="muted" style="padding:12px">Nenhum registro encontrado.</div>
+          </div>
+        </section>
+      </main>
+    </section>
+  </div>
+
+  <script>
+    const KEYS = { users:'crm_users_v2', architects:'crm_architects_v2', session:'crm_session_v2' };
+    const loginSection = document.getElementById('loginSection');
+    const appSection = document.getElementById('appSection');
+    const whoami = document.getElementById('whoami');
+    const managerPanel = document.getElementById('managerPanel');
+    const ownerField = document.getElementById('ownerField');
+    const ownerConsultor = document.getElementById('ownerConsultor');
+    const archForm = document.getElementById('archForm');
+    const archBody = document.getElementById('archBody');
+    const consultoresBody = document.getElementById('consultoresBody');
+    const totalInfo = document.getElementById('totalInfo');
+    const empty = document.getElementById('empty');
+    const stats = document.getElementById('stats');
+    let currentArchId = null;
+    let onlyUpcoming = false;
+
+    const read = (k,d=[]) => { try { return JSON.parse(localStorage.getItem(k) || JSON.stringify(d)); } catch { return d; } };
+    const write = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+
+    function bootstrap() {
+      const users = read(KEYS.users);
+      if (!users.length) {
+        write(KEYS.users, [
+          { id: crypto.randomUUID(), name:'Gerente Geral', username:'admin', password:'admin123', role:'manager', active:true }
+        ]);
+      }
+      if (!read(KEYS.architects).length) write(KEYS.architects, []);
+    }
+
+    function sessionUser() {
+      const s = read(KEYS.session, null);
+      if (!s) return null;
+      return read(KEYS.users).find(u => u.id === s.userId && u.active) || null;
+    }
+
+    function logout() { localStorage.removeItem(KEYS.session); location.reload(); }
+
+    function requireAuth() {
+      const user = sessionUser();
+      if (!user) {
+        loginSection.classList.remove('hidden');
+        appSection.classList.add('hidden');
+        return null;
+      }
+      loginSection.classList.add('hidden');
+      appSection.classList.remove('hidden');
+      whoami.innerHTML = `${user.name} • <b>${user.role === 'manager' ? 'Gerente' : 'Consultor'}</b>`;
+      managerPanel.classList.toggle('hidden', user.role !== 'manager');
+      ownerField.classList.toggle('hidden', user.role !== 'manager');
+      return user;
+    }
+
+    function consultants() {
+      return read(KEYS.users).filter(u => u.role === 'consultant' && u.active);
+    }
+
+    function architectScope(user) {
+      const all = read(KEYS.architects);
+      return user.role === 'manager' ? all : all.filter(a => a.owner_consultor_id === user.id);
+    }
+
+    function populateOwnerSelect(user) {
+      ownerConsultor.innerHTML = '';
+      if (user.role === 'manager') {
+        for (const c of consultants()) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `${c.name} (@${c.username})`;
+          ownerConsultor.appendChild(opt);
+        }
+      }
+    }
+
+    function drawStats(user) {
+      const list = architectScope(user);
+      const withProject = list.filter(a => a.tem_projeto === 'Sim').length;
+      const upcoming = list.filter(a => a.proximo_contato && a.proximo_contato >= new Date().toISOString().slice(0,10)).length;
+      const overdue = list.filter(a => a.proximo_contato && a.proximo_contato < new Date().toISOString().slice(0,10)).length;
+      const consultCount = consultants().length;
+      stats.innerHTML = `
+        <div class="stat"><span class="muted">Arquitetos na carteira</span><b>${list.length}</b></div>
+        <div class="stat"><span class="muted">Com projeto ativo</span><b>${withProject}</b></div>
+        <div class="stat"><span class="muted">Próximos contatos</span><b>${upcoming}</b></div>
+        <div class="stat"><span class="muted">Contatos em atraso</span><b>${overdue}</b></div>
+        ${user.role === 'manager' ? `<div class="stat"><span class="muted">Consultores ativos</span><b>${consultCount}</b></div>` : ''}
+      `;
+    }
+
+    function renderConsultantsTable() {
+      const allUsers = read(KEYS.users);
+      const archs = read(KEYS.architects);
+      consultoresBody.innerHTML = '';
+      for (const u of allUsers.filter(x => x.role === 'consultant')) {
+        const cnt = archs.filter(a => a.owner_consultor_id === u.id).length;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${u.name}</td><td>@${u.username}</td><td>${cnt}</td><td>${u.active ? `<button class="btn btn-danger" data-del-user="${u.id}">Desativar</button>` : 'Inativo'}</td>`;
+        consultoresBody.appendChild(tr);
+      }
+    }
+
+    function renderArchitects(user) {
+      const users = read(KEYS.users);
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+      let list = architectScope(user).filter(a => [a.nome_completo,a.nome_escritorio,a.cidade_regiao,a.email].join(' ').toLowerCase().includes(search));
+      if (onlyUpcoming) list = list.filter(a => a.proximo_contato);
+      list.sort((a,b)=>(a.proximo_contato || '9999').localeCompare(b.proximo_contato || '9999'));
+      archBody.innerHTML = '';
+      totalInfo.textContent = `${list.length} registro(s)`;
+      empty.style.display = list.length ? 'none' : 'block';
+      for (const a of list) {
+        const owner = users.find(u => u.id === a.owner_consultor_id);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><b>${a.nome_completo || '-'}</b><div class="muted">${a.email || '-'}</div></td>
+          <td>${a.nome_escritorio || '-'}</td>
+          <td>${owner ? owner.name : '-'}</td>
+          <td><span class="pill ${a.tem_projeto === 'Sim' ? 'yes' : 'no'}">${a.tem_projeto || 'N/I'}</span></td>
+          <td>${a.primeiro_contato || '-'}</td>
+          <td>${a.proximo_contato || '-'}</td>
+          <td>
+            <button class="btn btn-light" data-edit="${a.id}">Editar</button>
+            <button class="btn btn-danger" data-del-arch="${a.id}">Excluir</button>
+          </td>
+        `;
+        archBody.appendChild(tr);
+      }
+    }
+
+    function fillArchForm(a, user) {
+      currentArchId = a.id;
+      Object.entries(a).forEach(([k,v]) => { const el = archForm.elements.namedItem(k); if (el) el.value = v || ''; });
+      if (user.role !== 'manager') ownerConsultor.value = user.id;
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    function resetArchForm(user) {
+      currentArchId = null;
+      archForm.reset();
+      if (user.role !== 'manager') ownerConsultor.value = user.id;
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const username = (fd.get('username') || '').toString().trim();
+      const password = (fd.get('password') || '').toString();
+      const user = read(KEYS.users).find(u => u.username === username && u.password === password && u.active);
+      if (!user) return alert('Credenciais inválidas ou usuário inativo.');
+      write(KEYS.session, { userId:user.id, loggedAt:new Date().toISOString() });
+      location.reload();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    document.getElementById('addConsultorBtn').addEventListener('click', () => {
+      const user = sessionUser();
+      if (!user || user.role !== 'manager') return;
+      const name = document.getElementById('consultorNome').value.trim();
+      const username = document.getElementById('consultorUser').value.trim();
+      const password = document.getElementById('consultorPass').value.trim();
+      if (!name || !username || !password) return alert('Preencha nome, usuário e senha do consultor.');
+      const allUsers = read(KEYS.users);
+      if (allUsers.some(u => u.username.toLowerCase() === username.toLowerCase())) return alert('Usuário já existe.');
+      allUsers.push({ id:crypto.randomUUID(), name, username, password, role:'consultant', active:true });
+      write(KEYS.users, allUsers);
+      document.getElementById('consultorNome').value = '';
+      document.getElementById('consultorUser').value = '';
+      document.getElementById('consultorPass').value = '';
+      populateOwnerSelect(user); renderConsultantsTable(); renderArchitects(user); drawStats(user);
+    });
+
+    consultoresBody.addEventListener('click', e => {
+      const id = e.target.getAttribute('data-del-user');
+      if (!id) return;
+      if (!confirm('Deseja desativar este consultor?')) return;
+      const users = read(KEYS.users).map(u => u.id === id ? ({...u, active:false}) : u);
+      write(KEYS.users, users);
+      const user = sessionUser();
+      populateOwnerSelect(user); renderConsultantsTable(); renderArchitects(user); drawStats(user);
+    });
+
+    archForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const user = sessionUser();
+      const data = Object.fromEntries(new FormData(archForm).entries());
+      if (user.role !== 'manager') data.owner_consultor_id = user.id;
+      if (!data.owner_consultor_id) return alert('Selecione o consultor responsável.');
+      const all = read(KEYS.architects);
+      const payload = { ...data, id: currentArchId || crypto.randomUUID(), atualizado_em:new Date().toISOString() };
+      const idx = all.findIndex(a => a.id === payload.id);
+      if (idx >= 0) {
+        if (user.role !== 'manager' && all[idx].owner_consultor_id !== user.id) return alert('Sem permissão para editar este cadastro.');
+        all[idx] = payload;
+      } else all.push(payload);
+      write(KEYS.architects, all);
+      resetArchForm(user); renderArchitects(user); drawStats(user); alert('Cadastro salvo.');
+    });
+
+    document.getElementById('newBtn').addEventListener('click', () => { const u = sessionUser(); if (u) resetArchForm(u); });
+    document.getElementById('searchInput').addEventListener('input', () => { const u = sessionUser(); if (u) renderArchitects(u); });
+    document.getElementById('upcomingBtn').addEventListener('click', e => {
+      onlyUpcoming = !onlyUpcoming;
+      e.target.textContent = onlyUpcoming ? 'Mostrar todos' : 'Somente próximos contatos';
+      const u = sessionUser(); if (u) renderArchitects(u);
+    });
+
+    archBody.addEventListener('click', e => {
+      const editId = e.target.getAttribute('data-edit');
+      const delId = e.target.getAttribute('data-del-arch');
+      const user = sessionUser();
+      const all = read(KEYS.architects);
+
+      if (editId) {
+        const item = all.find(a => a.id === editId);
+        if (!item) return;
+        if (user.role !== 'manager' && item.owner_consultor_id !== user.id) return alert('Sem permissão de edição.');
+        fillArchForm(item, user);
+      }
+
+      if (delId) {
+        const item = all.find(a => a.id === delId);
+        if (!item) return;
+        if (user.role !== 'manager' && item.owner_consultor_id !== user.id) return alert('Sem permissão de exclusão.');
+        if (!confirm('Deseja excluir este cadastro?')) return;
+        write(KEYS.architects, all.filter(a => a.id !== delId));
+        renderArchitects(user); drawStats(user);
+      }
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const user = sessionUser();
+      const data = architectScope(user);
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `crm-arquitetos-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    bootstrap();
+    const user = requireAuth();
+    if (user) {
+      populateOwnerSelect(user);
+      resetArchForm(user);
+      renderConsultantsTable();
+      renderArchitects(user);
+      drawStats(user);
+    }
+  </script>
+</body>
+</html>
